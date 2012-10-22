@@ -1,0 +1,1 @@
+Just playing around with ideas for database apis that don't make me hate what I'm doing.
