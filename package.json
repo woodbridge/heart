@@ -4,7 +4,7 @@
   "description": "a little database tool",
   "main": "index.js",
   "dependencies": {
-    "sqlite3": "~2.1.5"
+    "pg": "~0.8.3"
   },
   "devDependencies": {},
   "scripts": {
