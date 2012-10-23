@@ -119,7 +119,5 @@ Jar.brand = function(table) {
   }
 }
 
-var justin = Jar('users')
-justin.set({email: "foo"}).save(function() {
-  process.exit()
-})
+Jar.Database = Database
+module.exports = Jar
