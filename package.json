@@ -1,6 +1,6 @@
 {
-  "name": "jar",
-  "version": "0.0.0",
+  "name": "heart",
+  "version": "0.0.1",
   "description": "a little database tool",
   "main": "index.js",
   "dependencies": {

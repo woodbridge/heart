@@ -8,11 +8,11 @@
   Idol: Carbon paper.  Just write and it will take care of the rest.  Thats what
         I want for my database.
 
-  newUser = Jar('users')
+  newUser = Heart('users')
   newUser.set('email', 'test@test.com')
   newUser.save()
 
-  var User = Jar.bar('users')
+  var User = Heart.bar('users')
 
   users = db.query('select * from users', function(rows) {
     rows.map(function(row) {
@@ -63,7 +63,7 @@ var sql = function(hash) {
   }
 }
 
-var Jar = function(table, attrs) {
+var Heart = function(table, attrs) {
   if (attrs === null || typeof attrs === 'undefined') {
     attrs = {}
   };
@@ -113,11 +113,11 @@ var Jar = function(table, attrs) {
   }
 }
 
-Jar.brand = function(table) {
+Heart.brand = function(table) {
   return function(attrs) {
-    return Jar(table, attrs)
+    return Heart(table, attrs)
   }
 }
 
-Jar.Database = Database
-module.exports = Jar
+Heart.Database = Database
+module.exports = Heart
