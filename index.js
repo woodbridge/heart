@@ -1,7 +1,5 @@
 /*
 
-  goals:
-
   1. Save a hash to a table in postgres.
   2. Only save entries in the hash that need to be saved.
   3. be as simple as possible
@@ -23,17 +21,29 @@
   })
 */
 
-var sqlite = require('sqlite3')
-var db = new sqlite.Database(':memory:')
+var pg = require('pg')
 
-db.serialize(function() {
-  db.run('create table bugs (id integer, name text)')
-})
+var Database = {
+  config: {},
+  query: function(query, cb) {
+    pg.connect(this.config, function(err, client) {
+      if (err) throw err;
+      client.query(query, function(err, result) {
+        if (err) throw err;
+        cb(result)
+      })
+    })
+  }
+}
+
+Database.config = { database: 'jar_test' }
 
 var sql = function(hash) {
   var columns = Object.keys(hash)
   var values = columns.map(function(col) {
-    return hash[col];
+    var val = hash[col];
+    // quote
+    return "'" + val + "'";
   })
   return {
     columns: columns,
@@ -65,24 +75,43 @@ var Jar = function(table, attrs) {
     get: function(attr) {
       return this.attrs[attr]
     },
+    // set('foo', 'bar'), set({foo: 'bar', name: 'justin'})
     set: function(attr, val) {
-      this.changedAttrs[attr] = val
-      this.attrs[attr] = val
-      dirty = true
-      return true
+      // object
+      if (attr === Object(attr)) {
+        attrs = attr
+      }
+      // key, value
+      else {
+        attrs = { attr: val }
+      }
+      for(attr in attrs) {
+        var val = attrs[attr]
+        this.changedAttrs[attr] = val
+        this.attrs[attr] = val
+      }
+      this.dirty = true
+      return this
     },
-    save: function() {
+    save: function(cb) {
       var lazyStatement = sql(this.changedAttrs)
       if (this.attrs.id) {
-        console.log(lazyStatement.update(this.table))
+        var query = lazyStatement.update(this.table)
+        Database.query(query, function(result) {
+          if (cb) cb(result)
+        })
       }
       else {
-        console.log(lazyStatement.create(this.table))
+        var query = lazyStatement.create(this.table)
+        Database.query(query, function(result) {
+          if(cb) cb(result)
+        })
       }
+      this.changedAttrs = {}
+      this.dirty = false
     }
   }
 }
-
 
 Jar.brand = function(table) {
   return function(attrs) {
@@ -90,6 +119,7 @@ Jar.brand = function(table) {
   }
 }
 
-
-var User = Jar.brand('user')
-console.log(User())
+var justin = Jar('users')
+justin.set({email: "foo"}).save(function() {
+  process.exit()
+})
