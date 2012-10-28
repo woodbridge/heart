@@ -21,17 +21,23 @@
   })
 */
 
-var pg = require('pg')
-
+var pg = require('pg'
+)
 var Database = {
   config: {},
-  query: function(query, cb) {
+  query: function(query, paramsOrCb, cb) {
     pg.connect(this.config, function(err, client) {
       if (err) throw err;
-      client.query(query, function(err, result) {
+      var callback = function(err, result) {
         if (err) throw err;
         cb(result)
-      })
+      }
+      if (Array.isArray(paramsOrCb)) {
+        client.query(query, paramsOrCb, cb)
+      }
+      else {
+        client.query(query, paramsOrCb)
+      }
     })
   }
 }
@@ -67,6 +73,12 @@ var Heart = function(table, attrs) {
   if (attrs === null || typeof attrs === 'undefined') {
     attrs = {}
   };
+
+  if (Heart.processors[table]) {
+    var processor = Heart.processors[table]
+    attrs = processor(attrs)
+  };
+
   return {
     table: table,
     dirty: false,
@@ -83,7 +95,8 @@ var Heart = function(table, attrs) {
       }
       // key, value
       else {
-        attrs = { attr: val }
+        attrs = {}
+        attrs[attr] = val
       }
       for(attr in attrs) {
         var val = attrs[attr]
@@ -95,16 +108,22 @@ var Heart = function(table, attrs) {
     },
     save: function(cb) {
       var lazyStatement = sql(this.changedAttrs)
+      var self = this;
       if (this.attrs.id) {
         var query = lazyStatement.update(this.table)
-        Database.query(query, function(result) {
+        Database.query(query, function(err, result) {
+          if (err) throw err;
+          for(attr in self.changedAttrs) {
+            self.attrs[attr] = self.changedAttrs[attr]
+          }
           if (cb) cb(result)
         })
       }
       else {
         var query = lazyStatement.create(this.table)
-        Database.query(query, function(result) {
-          if(cb) cb(result)
+        Database.query(query, function(err, result) {
+          if (err) throw err
+          if (cb) cb(result)
         })
       }
       this.changedAttrs = {}
@@ -113,11 +132,18 @@ var Heart = function(table, attrs) {
   }
 }
 
+Heart.processors = {}
+
 Heart.brand = function(table) {
-  return function(attrs) {
+  var customHeart =  function(attrs) {
     return Heart(table, attrs)
   }
+  customHeart.processor = function(fn) {
+    Heart.processors[table] = fn
+  }
+  return customHeart
 }
 
+Heart.sql = sql
 Heart.Database = Database
 module.exports = Heart
